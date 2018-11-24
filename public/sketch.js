@@ -9,6 +9,8 @@ const height = 600;
 const unitSize = 30;
 const speed = 3;
 
+const fontSize = 60;
+
 function Bullet(owner, unitPos, color, vel) {
     this.pos = createVector(unitPos.x + (unitSize / 2), unitPos.y + (unitSize / 2));
     this.color = color;
@@ -35,6 +37,7 @@ function Bullet(owner, unitPos, color, vel) {
 function Player(color) {
     this.pos = createVector(width / 2, height / 2);
     this.id;
+    this.score = 0;
     this.health = 10;
     this.color = color;
     this.show = () => {
@@ -82,7 +85,7 @@ function Player(color) {
             allPlayers.splice(allPlayers.findIndex(item => item.id === this.id), 1);
             sendDeath({id: this.id});
         }
-        this.color = this.color.map(color => color += 12);
+        this.color = this.color.map(color => color -= 12);
     }
     this.setHealth = (hp) => this.health = hp;
     this.setId = (id) => this.id = id;
@@ -94,21 +97,24 @@ const findPlayerById = (id) => {
 
 function setup() {
     createCanvas(width, height);
-    background(32, 178, 170);
-    you = new Player([43, 255, 163]);
+    background(15, 27, 7);
+    textFont('Impact');
+    textSize(fontSize);
+    textAlign(CENTER, CENTER);
+    you = new Player([92,130,26]);
     allPlayers.push(you);
     you.show();
     socket = io.connect('http://localhost:3000');
     socket.on('id', (id) => you.setId(id));
     socket.on('newPlayer', (id) => {
         console.log('newPlayah');
-        const newbie = new Player([255, 42, 145]);
+        const newbie = new Player([255,255,255]);
         newbie.setId(id);
         allPlayers.push(newbie);
     });
     socket.on('users', (users) => {
         Object.keys(users).forEach(user => {
-            const oldie = new Player([255, 42, 145]);
+            const oldie = new Player([255,255,255]);
             oldie.setId(user);
             oldie.changePos(users[user].x, users[user].y);
             allPlayers.push(oldie);
@@ -130,8 +136,7 @@ const collision = (bulletX, bulletY, playerX, playerY) => {
 };
 
 function draw() {
-    background(16, 27, 102);
-
+    background(15, 27, 7);
     removableBullets = [];
     bullets.forEach((item, index) => {
         item.update();
@@ -143,6 +148,9 @@ function draw() {
                 if (collision(item.pos.x, item.pos.y, player.pos.x, player.pos.y)) {
                     removableBullets.push(index);
                     player.looseHealth();
+                    if (item.owner === you.id && player.health < 1) {
+                        you.score += 1;
+                    }
                 }
             }
         });
@@ -157,6 +165,12 @@ function draw() {
             player.show();
         }
     });
+    textAlign(RIGHT);
+    fill(198, 209, 102);
+    text(you.score, width - 40, 40);
+    textAlign(LEFT);
+    fill(198, 209, 102);
+    text(you.health, 40, 40);
 };
 
 function mouseClicked() {
