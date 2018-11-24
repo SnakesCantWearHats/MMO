@@ -1,6 +1,7 @@
 # An amazing piece of technology.
 ## What? Amazing? Technology? "I want some of that" - you probably.
 This is a game that is just the best thing you can imagine, don't believe it? Well don't take my word for it.
+
 "This is ok" - My grandpa.
 
 "You spent 7 hours on this..?" - my ~~best~~ friend.
@@ -21,4 +22,4 @@ npm run start
  All you need now is to launch your browser. It should work on Chrome. If you prefer other browsers, this game should work. But if by chance you use IE or safari and it does not work, go get yourself a normal browser :)
 
  The server is running on [localhost](http://localhost:3000)
- HF GL
+GL HF
