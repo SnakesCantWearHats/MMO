@@ -3,8 +3,8 @@ let socket;
 const allPlayers = [];
 const bullets = [];
 
-const width = 300;
-const height = 300;
+const width = 800;
+const height = 600;
 
 const unitSize = 30;
 const speed = 3;
