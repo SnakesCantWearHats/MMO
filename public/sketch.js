@@ -2,6 +2,9 @@ let you;
 let socket;
 const allPlayers = [];
 const bullets = [];
+const platforms = [
+    {x: 0, y: 600, width: 150, height: 20},
+];
 
 const width = 800;
 const height = 600;
@@ -21,7 +24,7 @@ function Bullet(owner, unitPos, color, vel) {
     } else {
         this.vel = p5.Vector.fromAngle(createVector(mouseX - this.pos.x, mouseY - this.pos.y).heading());
     }
-    this.vel.mult(5);
+    this.vel.mult(6);
 
     this.update = () => {
         this.pos.add(this.vel);
@@ -35,10 +38,12 @@ function Bullet(owner, unitPos, color, vel) {
     };
 };
 function Player(color) {
-    this.pos = createVector(width / 2, height / 2);
+    this.pos = createVector(Math.floor(random(width - unitSize)), Math.floor(random(height - unitSize)));
     this.id;
     this.score = 0;
     this.health = 10;
+    this.inAir = false;
+    this.gravity = 0;
     this.color = color;
     this.show = () => {
         fill(...this.color);
@@ -49,28 +54,29 @@ function Player(color) {
         this.pos.y = y;
     }
     this.act = () => {
+        this.inAir = !touchesGround(this.pos);
+        if (touchesGround(this.pos)) {
+            this.gravity = 0;
+            this.pos.y = height - (unitSize + 1);
+        }
         if(keyIsDown(LEFT_ARROW) || keyIsDown(65)) {
-            if (this.pos.x >= 0) {
+            if (this.pos.x >= 1) {
                 this.pos = createVector(this.pos.x - speed, this.pos.y);
-                sendPosition({x: this.pos.x, y: this.pos.y, id: this.id});
             }
         } else if(keyIsDown(RIGHT_ARROW) || keyIsDown(68)) {
-            if (this.pos.x + unitSize <= width) {
+            if (this.pos.x + (unitSize + 1) <= width) {
                 this.pos = createVector(this.pos.x + speed, this.pos.y);
-                sendPosition({x: this.pos.x, y: this.pos.y, id: this.id});
             }
         }
-        if(keyIsDown(UP_ARROW) || keyIsDown(87)) {
+        this.pos.y += this.gravity;
+        this.gravity += 0.3;
+        if(!this.inAir && (keyIsDown(UP_ARROW) || keyIsDown(87) || keyIsDown(32))) {
             if (this.pos.y >= 0) {
-                this.pos = createVector(this.pos.x, this.pos.y - speed);
-                sendPosition({x: this.pos.x, y: this.pos.y, id: this.id});
-            }
-        } else if(keyIsDown(DOWN_ARROW) || keyIsDown(83)) {
-            if (this.pos.y + unitSize <= height) {
-                this.pos = createVector(this.pos.x, this.pos.y + speed);
-                sendPosition({x: this.pos.x, y: this.pos.y, id: this.id});
+                this.gravity = -10;
+                this.pos.y +=this.gravity;
             }
         }
+        sendPosition({x: this.pos.x, y: this.pos.y, id: this.id});
     };
     this.addBullet = (posX, posY) => {
         bullets.push(new Bullet(this.id, this.pos, this.color, {x: posX, y: posY}));
@@ -91,33 +97,41 @@ function Player(color) {
     this.setId = (id) => this.id = id;
 };
 
+const touchesGround = (unitPos) => {
+    if (unitPos.y + (unitSize + 1) >= height) {
+        return true;
+    }
+    return false;
+};
+
 const findPlayerById = (id) => {
     return allPlayers.findIndex(player => player.id === id);
 };
 
 function setup() {
     createCanvas(width, height);
-    background(15, 27, 7);
     textFont('Impact');
     textSize(fontSize);
     textAlign(CENTER, CENTER);
-    you = new Player([92,130,26]);
+    you = new Player([0, 141, 203]);
     allPlayers.push(you);
     you.show();
     socket = io.connect('http://localhost:3000');
     socket.on('id', (id) => you.setId(id));
     socket.on('newPlayer', (id) => {
         console.log('newPlayah');
-        const newbie = new Player([255,255,255]);
+        const newbie = new Player([225, 49, 91]);
         newbie.setId(id);
         allPlayers.push(newbie);
+        console.log(allPlayers);
     });
     socket.on('users', (users) => {
-        Object.keys(users).forEach(user => {
-            const oldie = new Player([255,255,255]);
-            oldie.setId(user);
-            oldie.changePos(users[user].x, users[user].y);
+        users.forEach(user => {
+            const oldie = new Player([225, 49, 91]);
+            oldie.setId(user.id);
+            oldie.changePos(user.x, user.y);
             allPlayers.push(oldie);
+            console.log(allPlayers);
         });
     });
     socket.on('position', (data) => {
@@ -125,6 +139,12 @@ function setup() {
     });
     socket.on('bullet', (data) => {
         allPlayers[findPlayerById(data.id)].addBullet(data.x, data.y);
+    });
+    socket.on('death', (id) => {
+        const index = findPlayerById(id);
+        if (index !== -1) {
+            allPlayers.splice(index, 1);
+        }
     });
 };
 let removableBullets = [];
@@ -136,7 +156,11 @@ const collision = (bulletX, bulletY, playerX, playerY) => {
 };
 
 function draw() {
-    background(15, 27, 7);
+    background(255,255,255);
+    platforms.forEach((platform) => {
+        fill(0);
+        rect(platform.x, platform.y, platform.width, platform.height);
+    });
     removableBullets = [];
     bullets.forEach((item, index) => {
         item.update();
@@ -166,10 +190,10 @@ function draw() {
         }
     });
     textAlign(RIGHT);
-    fill(198, 209, 102);
+    fill(244, 125, 74);
     text(you.score, width - 40, 40);
     textAlign(LEFT);
-    fill(198, 209, 102);
+    fill(244, 125, 74);
     text(you.health, 40, 40);
 };
 
