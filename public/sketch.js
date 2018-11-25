@@ -2,9 +2,7 @@ let you;
 let socket;
 const allPlayers = [];
 const bullets = [];
-const platforms = [
-    {x: 0, y: 600, width: 150, height: 20},
-];
+let platforms = [];
 
 const width = 800;
 const height = 600;
@@ -14,6 +12,32 @@ const speed = 3;
 
 const fontSize = 60;
 
+function Platform({x, y, width, height, id, health}) {
+    this.pos = createVector(x, y);
+    this.height = height;
+    this.width = width;
+    this.health = health;
+    this.color = 65;
+    this.id = id;
+    this.render = () => {
+        fill(this.color);
+        rect(this.pos.x, this.pos.y, this.width, this.height, 4);
+    };
+    this.looseHealth = () => {
+        this.health -= 1;
+        this.color += 65;
+        if (this.health === 0) {
+            const index = findPlatformById(this.id);
+            if (index !== -1) {
+                sendPlatformDeath({id: this.id});
+            }
+        }
+    };
+};
+const deletePlatform = (index) => {
+    const deadPlatform = platforms.slice(index, 1);
+    // sendPlatformDeath(deadPlatform);
+}
 function Bullet(owner, unitPos, color, vel) {
     this.pos = createVector(unitPos.x + (unitSize / 2), unitPos.y + (unitSize / 2));
     this.color = color;
@@ -24,9 +48,17 @@ function Bullet(owner, unitPos, color, vel) {
     } else {
         this.vel = p5.Vector.fromAngle(createVector(mouseX - this.pos.x, mouseY - this.pos.y).heading());
     }
-    this.vel.mult(6);
+    this.vel.mult(10);
 
     this.update = () => {
+        platforms.forEach((platform) => {
+            if (this.pos.x >= platform.pos.x && this.pos.x <= platform.pos.x + platform.width) {
+                if (this.pos.y >= platform.pos.y && this.pos.y <= platform.pos.y + platform.height) {
+                    platform.looseHealth();
+                    this.pos.x = width + 300;
+                }
+            }
+        });
         this.pos.add(this.vel);
     };
     this.render = () => {
@@ -57,7 +89,7 @@ function Player(color) {
         this.inAir = !touchesGround(this.pos);
         if (touchesGround(this.pos)) {
             this.gravity = 0;
-            this.pos.y = height - (unitSize + 1);
+            // this.pos.y = height - (unitSize + 1);
         }
         if(keyIsDown(LEFT_ARROW) || keyIsDown(65)) {
             if (this.pos.x >= 1) {
@@ -101,11 +133,32 @@ const touchesGround = (unitPos) => {
     if (unitPos.y + (unitSize + 1) >= height) {
         return true;
     }
-    return false;
+    let touch = false
+    platforms.forEach((platform) => {
+        if (unitPos.y + (unitSize +1) >= platform.pos.y && unitPos.y + (unitSize +1) <= platform.pos.y + platform.height) {
+            if (unitPos.x + unitSize >= platform.pos.x && unitPos.x <= platform.pos.x + platform.width) {
+                touch = true;
+            }
+        }
+    });
+    allPlayers.forEach((player) => {
+        if (unitPos.x !== player.pos.x && unitPos.y !== player.pos.y){
+            if (unitPos.y + (unitSize +1) >= player.pos.y && unitPos.y + (unitSize +1) <= player.pos.y + unitSize) {
+                if (unitPos.x + unitSize >= player.pos.x && unitPos.x <= player.pos.x + unitSize) {
+                    touch = true;
+                }
+            }
+        }
+    });
+    
+    return touch;
 };
 
 const findPlayerById = (id) => {
     return allPlayers.findIndex(player => player.id === id);
+};
+const findPlatformById = (id) => {
+    return platforms.findIndex(platform => platform.id === id);
 };
 
 function setup() {
@@ -123,7 +176,6 @@ function setup() {
         const newbie = new Player([225, 49, 91]);
         newbie.setId(id);
         allPlayers.push(newbie);
-        console.log(allPlayers);
     });
     socket.on('users', (users) => {
         users.forEach(user => {
@@ -131,7 +183,6 @@ function setup() {
             oldie.setId(user.id);
             oldie.changePos(user.x, user.y);
             allPlayers.push(oldie);
-            console.log(allPlayers);
         });
     });
     socket.on('position', (data) => {
@@ -146,6 +197,19 @@ function setup() {
             allPlayers.splice(index, 1);
         }
     });
+    socket.on('platform', (data) => {
+        const newPlatform = new Platform(data);
+        platforms.push(newPlatform);
+    });
+    socket.on('platforms', (oldPlatforms) => {
+        oldPlatforms.forEach(item => platforms.push(new Platform(item)));
+    });
+    socket.on('platformDeath', (deadPlatform) => {
+        const index = findPlatformById(deadPlatform.id);
+        if (index !== -1) {
+            platforms.splice(index, 1);
+        }
+    });
 };
 let removableBullets = [];
 
@@ -158,13 +222,12 @@ const collision = (bulletX, bulletY, playerX, playerY) => {
 function draw() {
     background(255,255,255);
     platforms.forEach((platform) => {
-        fill(0);
-        rect(platform.x, platform.y, platform.width, platform.height);
+        platform.render();
     });
     removableBullets = [];
     bullets.forEach((item, index) => {
         item.update();
-        if (item.pos.x > width || item.pos.x < 0 || item.pos.y > height || item.pos.y < 0) {
+        if (item.pos.x > width || item.pos.x < 0 || item.pos.y > height || item.pos.y < -200) {
             removableBullets.push(index);
         }
         allPlayers.forEach((player) => {
@@ -212,5 +275,9 @@ function sendBullet(data) {
 };
 
 function sendPosition(data) {
-    socket.emit('position',data);
+    socket.emit('position', data);
 };
+
+function sendPlatformDeath(platform) {
+    socket.emit('platformDeath', platform);
+}
