@@ -8,7 +8,7 @@ const width = 800;
 const height = 600;
 
 const unitSize = 30;
-const speed = 3;
+let speed = 3;
 
 const fontSize = 60;
 
@@ -169,17 +169,17 @@ function setup() {
     you = new Player([0, 141, 203]);
     allPlayers.push(you);
     you.show();
-    socket = io.connect('http://localhost:3000');
+    socket = io.connect('http://192.168.10.41:3000');
     socket.on('id', (id) => you.setId(id));
     socket.on('newPlayer', (id) => {
         console.log('newPlayah');
-        const newbie = new Player([225, 49, 91]);
+        const newbie = new Player([random(255), random(255), 91]);
         newbie.setId(id);
         allPlayers.push(newbie);
     });
     socket.on('users', (users) => {
         users.forEach(user => {
-            const oldie = new Player([225, 49, 91]);
+            const oldie = new Player([random(255), random(255), 91]);
             oldie.setId(user.id);
             oldie.changePos(user.x, user.y);
             allPlayers.push(oldie);
