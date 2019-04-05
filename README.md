@@ -12,7 +12,7 @@ And there are a lot more review just like these.
 
 You are probably guessing, how on gosh darn earth can I play this cool and amazing game of video. Well guess no more, presenting (*drum roll*) a **_TUTORIAL!_**
 
-First you need npm. Once you have a fresh pair of npm (I know this process might make you impatient ("That joke is terrible" - me)) clone this git repository and once in correct directory run these commands in bash terminal (or cmd if you don't like fun): 
+First you need npm. Once you have a fresh npm, clone this git repository and once in correct directory run these commands in bash terminal (or cmd if you don't like fun): 
 ```
 npm install
 npm run start
